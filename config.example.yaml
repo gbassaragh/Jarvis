@@ -1,0 +1,56 @@
+# AI Assistant Pro - Configuration Example
+# Copy this file to config.yaml and customize for your needs
+
+# Stone Retrieval Function (SRF) Configuration
+srf:
+  # Hyperparameters (α, β, γ, δ)
+  alpha: 0.3      # Emotional weight coefficient
+  beta: 0.2       # Associative strength coefficient
+  gamma: 0.25     # Recency coefficient
+  delta: 0.15     # Decay coefficient
+
+  # Temporal settings
+  decay_half_life: 3600.0  # Decay half-life in seconds (1 hour)
+  time_scale: 3600.0       # Recency time scale in seconds
+
+  # Retrieval settings
+  top_k: 10               # Number of top results to retrieve
+  min_score: 0.0          # Minimum score threshold
+
+  # Performance settings
+  use_gpu: true           # Use GPU acceleration
+  use_triton: true        # Use custom Triton kernels
+
+# Inference Engine Configuration
+engine:
+  model_name: "gpt2"      # HuggingFace model name
+  use_triton: true        # Enable Triton kernels
+  use_fp8: false          # Enable FP8 quantization (requires SM120)
+  enable_paged_attention: true  # Enable paged KV-cache
+
+  # Memory management
+  max_batch_size: 32      # Maximum batch size
+  max_num_blocks: 1024    # Maximum KV-cache blocks
+  block_size: 16          # Tokens per block
+
+  # Device settings
+  device: "cuda"          # Device (cuda/cpu)
+  dtype: "float16"        # Data type
+
+# API Server Configuration
+serving:
+  host: "0.0.0.0"         # Host to bind to
+  port: 8000              # Port to bind to
+  workers: 1              # Number of worker processes
+  timeout: 60             # Request timeout in seconds
+
+# Logging Configuration
+logging:
+  level: "INFO"           # Log level (DEBUG/INFO/WARNING/ERROR/CRITICAL)
+  log_file: "logs/ai_assistant_pro.log"  # Log file path
+  use_rich: true          # Use rich formatting for console
+
+# Monitoring (optional)
+monitoring:
+  enable_prometheus: false
+  prometheus_port: 9090

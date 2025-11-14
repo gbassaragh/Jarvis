@@ -1,0 +1,274 @@
+"""
+Command-line interface for AI Assistant Pro
+
+Provides easy access to all framework features via CLI.
+"""
+
+import click
+import torch
+from pathlib import Path
+from rich.console import Console
+from rich.table import Table
+
+console = Console()
+
+
+@click.group()
+@click.version_option(version="0.1.0")
+def cli():
+    """AI Assistant Pro - High-performance inference framework for NVIDIA Blackwell"""
+    pass
+
+
+@cli.command()
+@click.option("--model", "-m", default="gpt2", help="Model name from HuggingFace")
+@click.option("--prompt", "-p", required=True, help="Input prompt")
+@click.option("--max-tokens", default=100, help="Maximum tokens to generate")
+@click.option("--temperature", default=0.8, help="Sampling temperature")
+@click.option("--use-triton/--no-triton", default=True, help="Use Triton kernels")
+@click.option("--use-fp8/--no-fp8", default=False, help="Use FP8 quantization")
+def generate(model, prompt, max_tokens, temperature, use_triton, use_fp8):
+    """Generate text from a prompt"""
+    from ai_assistant_pro import AssistantEngine
+
+    console.print(f"[bold]Loading model:[/bold] {model}")
+
+    engine = AssistantEngine(
+        model_name=model,
+        use_triton=use_triton,
+        use_fp8=use_fp8,
+        enable_paged_attention=True,
+    )
+
+    console.print(f"\n[bold]Prompt:[/bold] {prompt}")
+    console.print("[dim]Generating...[/dim]\n")
+
+    response = engine.generate(
+        prompt=prompt,
+        max_tokens=max_tokens,
+        temperature=temperature,
+    )
+
+    console.print(f"[bold green]Response:[/bold green]\n{response}")
+
+
+@cli.command()
+@click.option("--host", default="0.0.0.0", help="Host to bind to")
+@click.option("--port", default=8000, help="Port to bind to")
+@click.option("--model", "-m", default="gpt2", help="Model to serve")
+@click.option("--use-triton/--no-triton", default=True, help="Use Triton kernels")
+@click.option("--use-fp8/--no-fp8", default=False, help="Use FP8 quantization")
+def serve(host, port, model, use_triton, use_fp8):
+    """Start API server"""
+    from ai_assistant_pro.serving import serve as start_server
+
+    console.print(f"[bold]Starting API server...[/bold]")
+    console.print(f"  Model: {model}")
+    console.print(f"  Host: {host}")
+    console.print(f"  Port: {port}")
+    console.print(f"  Triton: {use_triton}")
+    console.print(f"  FP8: {use_fp8}")
+
+    start_server(
+        host=host,
+        port=port,
+        model_name=model,
+        use_triton=use_triton,
+        use_fp8=use_fp8,
+    )
+
+
+@cli.command()
+@click.option("--seq-lengths", default="128,512,1024,2048", help="Comma-separated sequence lengths")
+@click.option("--model", "-m", default="gpt2", help="Model to benchmark")
+def benchmark(seq_lengths, model):
+    """Run performance benchmarks"""
+    from ai_assistant_pro import AssistantEngine
+
+    seq_lens = [int(x) for x in seq_lengths.split(",")]
+
+    console.print("[bold]Running benchmarks...[/bold]")
+    console.print(f"  Model: {model}")
+    console.print(f"  Sequence lengths: {seq_lens}")
+
+    engine = AssistantEngine(model_name=model, use_triton=True)
+
+    results = engine.benchmark(seq_lengths=seq_lens)
+
+    # Display results
+    table = Table(title="Benchmark Results", show_header=True)
+    table.add_column("Sequence Length", style="cyan")
+    table.add_column("Avg Time (ms)", justify="right", style="green")
+    table.add_column("Tokens/sec", justify="right", style="yellow")
+
+    for seq_len in seq_lens:
+        key = f"seq_len_{seq_len}"
+        if key in results:
+            table.add_row(
+                str(seq_len),
+                f"{results[key]['avg_time_ms']:.2f}",
+                f"{results[key]['tokens_per_sec']:.2f}",
+            )
+
+    console.print("\n")
+    console.print(table)
+
+
+@cli.command()
+@click.option("--n-candidates", default=1000, help="Number of candidates")
+@click.option("--embedding-dim", default=768, help="Embedding dimension")
+def srf_benchmark(n_candidates, embedding_dim):
+    """Run SRF benchmarks"""
+    from benchmarks.srf_benchmark import SRFBenchmark, SRFQualityBenchmark
+
+    console.print("[bold]Running SRF benchmarks...[/bold]")
+
+    # Performance benchmark
+    perf_bench = SRFBenchmark(
+        n_candidates=n_candidates,
+        embedding_dim=embedding_dim,
+    )
+    perf_bench.run_all_benchmarks()
+
+    # Quality benchmark
+    if n_candidates <= 1000:
+        quality_bench = SRFQualityBenchmark(n_candidates=n_candidates // 2)
+        quality_bench.run_quality_benchmark()
+
+
+@cli.command()
+@click.argument("config_file", type=click.Path(exists=True))
+@click.option("--output", "-o", default="config_summary.txt", help="Output file")
+def validate_config(config_file, output):
+    """Validate configuration file"""
+    import yaml
+
+    with open(config_file) as f:
+        config = yaml.safe_load(f)
+
+    console.print(f"[bold]Validating configuration:[/bold] {config_file}")
+
+    # Validate SRF config
+    if "srf" in config:
+        from ai_assistant_pro.srf import SRFConfig
+
+        try:
+            srf_config = SRFConfig(**config["srf"])
+            srf_config.validate()
+            console.print("  [green]✓[/green] SRF config valid")
+        except Exception as e:
+            console.print(f"  [red]✗[/red] SRF config invalid: {e}")
+
+    # Validate engine config
+    if "engine" in config:
+        console.print("  [green]✓[/green] Engine config found")
+
+    console.print(f"\n[bold]Summary written to:[/bold] {output}")
+
+
+@cli.command()
+def info():
+    """Display system information"""
+    console.print("[bold]AI Assistant Pro - System Information[/bold]\n")
+
+    # PyTorch version
+    console.print(f"PyTorch version: {torch.__version__}")
+
+    # CUDA
+    if torch.cuda.is_available():
+        console.print(f"CUDA available: [green]Yes[/green]")
+        console.print(f"CUDA version: {torch.version.cuda}")
+        console.print(f"GPU: {torch.cuda.get_device_name(0)}")
+        console.print(f"GPU memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
+
+        # Compute capability
+        cc = torch.cuda.get_device_capability(0)
+        sm = cc[0] * 10 + cc[1]
+        console.print(f"Compute capability: {cc[0]}.{cc[1]} (SM{sm})")
+
+        if sm >= 120:
+            console.print("  [bold green]✓ Blackwell (SM120+) - All features available[/bold green]")
+        elif sm >= 90:
+            console.print("  [yellow]⚠ Hopper (SM90+) - Most features available[/yellow]")
+        else:
+            console.print("  [red]⚠ Older GPU - Limited feature support[/red]")
+    else:
+        console.print(f"CUDA available: [red]No[/red]")
+
+    # Triton
+    try:
+        import triton
+        console.print(f"\nTriton version: {triton.__version__}")
+    except ImportError:
+        console.print("\nTriton: [red]Not installed[/red]")
+
+
+@cli.command()
+@click.option("--n-candidates", default=100, help="Number of test candidates")
+@click.option("--query", "-q", default="Test query", help="Query text")
+def srf_demo(n_candidates, query):
+    """Interactive SRF demonstration"""
+    from ai_assistant_pro.srf import StoneRetrievalFunction, SRFConfig, MemoryCandidate
+    import time
+
+    console.print("[bold]Stone Retrieval Function - Interactive Demo[/bold]\n")
+
+    # Create SRF
+    config = SRFConfig(alpha=0.3, beta=0.2, gamma=0.25, delta=0.15)
+    srf = StoneRetrievalFunction(config)
+
+    console.print(f"Creating {n_candidates} test candidates...")
+
+    # Add test candidates
+    for i in range(n_candidates):
+        candidate = MemoryCandidate(
+            id=i,
+            content=torch.randn(768),
+            text=f"Memory {i}: " + ("Important" if i < 10 else "Regular"),
+            emotional_score=0.9 if i < 10 else 0.3,
+            timestamp=time.time() - (i * 60),  # Older as i increases
+        )
+        srf.add_candidate(candidate)
+
+    console.print(f"[green]✓[/green] Added {len(srf)} candidates\n")
+
+    # Retrieve
+    console.print(f"[bold]Query:[/bold] {query}")
+    query_emb = torch.randn(768)
+    results = srf.retrieve(query_emb, top_k=10)
+
+    # Display results
+    table = Table(title="Top-10 Retrieved Memories", show_header=True)
+    table.add_column("Rank", style="cyan", justify="right")
+    table.add_column("Memory", style="white", width=40)
+    table.add_column("Score", style="green", justify="right")
+    table.add_column("Components", style="yellow")
+
+    for i, result in enumerate(results, 1):
+        components_str = (
+            f"S:{result.components['semantic']:.2f} "
+            f"E:{result.components['emotional']:.2f} "
+            f"A:{result.components['associative']:.2f} "
+            f"R:{result.components['recency']:.2f} "
+            f"D:{result.components['decay']:.2f}"
+        )
+
+        table.add_row(
+            str(i),
+            result.candidate.text,
+            f"{result.score:.3f}",
+            components_str,
+        )
+
+    console.print("\n")
+    console.print(table)
+
+    # Statistics
+    stats = srf.get_statistics()
+    console.print(f"\n[bold]Statistics:[/bold]")
+    console.print(f"  Total candidates: {stats['total_candidates']}")
+    console.print(f"  Retrievals performed: {stats['total_retrievals']}")
+
+
+if __name__ == "__main__":
+    cli()
