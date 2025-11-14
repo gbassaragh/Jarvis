@@ -166,6 +166,228 @@ def validate_config(config_file, output):
     console.print(f"\n[bold]Summary written to:[/bold] {output}")
 
 
+@cli.group()
+def jarvis():
+    """JARVIS - Complete AI assistant (voice, memory, tools, RAG)"""
+    pass
+
+
+@jarvis.command()
+@click.option("--model", "-m", default="gpt2", help="Model name")
+@click.option("--user-id", "-u", default="default", help="User identifier")
+@click.option("--enable-memory/--no-memory", default=True, help="Enable conversational memory")
+@click.option("--enable-tools/--no-tools", default=True, help="Enable tool use")
+@click.option("--enable-rag/--no-rag", default=False, help="Enable RAG knowledge base")
+@click.option("--use-triton/--no-triton", default=True, help="Use Triton kernels")
+@click.option("--use-fp8/--no-fp8", default=False, help="Use FP8 quantization")
+def chat(model, user_id, enable_memory, enable_tools, enable_rag, use_triton, use_fp8):
+    """Start interactive JARVIS chat"""
+    from ai_assistant_pro.jarvis import JARVIS
+
+    console.print("[bold]Initializing JARVIS...[/bold]")
+
+    jarvis_instance = JARVIS(
+        model_name=model,
+        user_id=user_id,
+        enable_voice=False,
+        enable_tools=enable_tools,
+        enable_rag=enable_rag,
+        enable_memory=enable_memory,
+        use_triton=use_triton,
+        use_fp8=use_fp8,
+    )
+
+    console.print("[green]✓[/green] JARVIS ready!\n")
+    console.print("Type 'quit' to exit, 'stats' for statistics\n")
+
+    while True:
+        try:
+            message = input("You: ")
+
+            if message.lower() == "quit":
+                break
+
+            if message.lower() == "stats":
+                stats = jarvis_instance.get_stats()
+                console.print("\n[bold]Statistics:[/bold]")
+                for key, value in stats.items():
+                    console.print(f"  {key}: {value}")
+                console.print()
+                continue
+
+            result = jarvis_instance.chat(
+                message,
+                use_memory=enable_memory,
+                use_tools=enable_tools,
+                use_rag=enable_rag,
+            )
+
+            console.print(f"\n[bold green]JARVIS:[/bold green] {result['response']}")
+
+            if result["tool_results"]:
+                console.print("\n[dim]Tools used:[/dim]")
+                for tr in result["tool_results"]:
+                    console.print(f"  - {tr['tool']}: {tr['result']}")
+
+            if result["rag_sources"]:
+                console.print(f"\n[dim]Retrieved {len(result['rag_sources'])} knowledge sources[/dim]")
+
+            console.print()
+
+        except KeyboardInterrupt:
+            break
+
+    console.print("\n[bold]Goodbye![/bold]")
+
+
+@jarvis.command()
+@click.option("--host", default="0.0.0.0", help="Host to bind to")
+@click.option("--port", default=8080, help="Port to bind to")
+@click.option("--model", "-m", default="gpt2", help="Model name")
+@click.option("--use-triton/--no-triton", default=True, help="Use Triton kernels")
+@click.option("--use-fp8/--no-fp8", default=False, help="Use FP8 quantization")
+def serve(host, port, model, use_triton, use_fp8):
+    """Start JARVIS web interface"""
+    from ai_assistant_pro.jarvis import JARVIS
+
+    console.print("[bold]Starting JARVIS web interface...[/bold]")
+
+    jarvis_instance = JARVIS(
+        model_name=model,
+        enable_voice=False,
+        enable_tools=True,
+        enable_rag=True,
+        enable_memory=True,
+        use_triton=use_triton,
+        use_fp8=use_fp8,
+    )
+
+    console.print(f"\n[green]✓[/green] JARVIS initialized")
+    console.print(f"[bold]Web interface:[/bold] http://{host}:{port}")
+    console.print("\nPress Ctrl+C to stop\n")
+
+    jarvis_instance.start_web_interface(host=host, port=port)
+
+
+@jarvis.command()
+@click.option("--model", "-m", default="gpt2", help="Model name")
+@click.option("--user-id", "-u", default="default", help="User identifier")
+def voice(model, user_id):
+    """Start JARVIS voice assistant (requires microphone)"""
+    from ai_assistant_pro.jarvis import JARVIS
+
+    console.print("[bold]Starting JARVIS voice assistant...[/bold]")
+
+    jarvis_instance = JARVIS(
+        model_name=model,
+        user_id=user_id,
+        enable_voice=True,
+        enable_tools=True,
+        enable_memory=True,
+    )
+
+    console.print("\n[green]✓[/green] JARVIS ready!")
+    console.print("[bold]Say 'Jarvis' followed by your command[/bold]")
+    console.print("Press Ctrl+C to stop\n")
+
+    jarvis_instance.start_voice_assistant()
+
+
+@jarvis.command()
+@click.argument("directory", type=click.Path(exists=True))
+@click.option("--pattern", default="*.md", help="File pattern to load")
+@click.option("--model", "-m", default="gpt2", help="Model name")
+def load_knowledge(directory, pattern, model):
+    """Load knowledge base from directory"""
+    from ai_assistant_pro.jarvis import JARVIS
+
+    console.print(f"[bold]Loading knowledge from:[/bold] {directory}")
+    console.print(f"[bold]Pattern:[/bold] {pattern}\n")
+
+    jarvis_instance = JARVIS(
+        model_name=model,
+        enable_rag=True,
+    )
+
+    jarvis_instance.load_knowledge_base(directory, pattern=pattern)
+
+    stats = jarvis_instance.get_stats()
+    console.print(f"\n[green]✓[/green] Loaded {stats['rag']['num_documents']} documents")
+    console.print(f"  Total chunks: {stats['rag']['num_chunks']}")
+
+
+@jarvis.command()
+@click.argument("knowledge_text")
+@click.option("--importance", default=0.7, type=float, help="Importance score (0-1)")
+@click.option("--topic", help="Topic/category")
+@click.option("--model", "-m", default="gpt2", help="Model name")
+def add_knowledge(knowledge_text, importance, topic, model):
+    """Add single knowledge item to JARVIS"""
+    from ai_assistant_pro.jarvis import JARVIS
+
+    jarvis_instance = JARVIS(
+        model_name=model,
+        enable_rag=True,
+    )
+
+    metadata = {"topic": topic} if topic else {}
+
+    jarvis_instance.add_knowledge(
+        content=knowledge_text,
+        metadata=metadata,
+        importance=importance,
+    )
+
+    console.print(f"[green]✓[/green] Added knowledge item")
+    console.print(f"  Text: {knowledge_text[:100]}...")
+    console.print(f"  Importance: {importance}")
+
+
+@jarvis.command()
+@click.option("--model", "-m", default="gpt2", help="Model name")
+@click.option("--user-id", "-u", default="default", help="User identifier")
+def stats(model, user_id):
+    """Show JARVIS statistics"""
+    from ai_assistant_pro.jarvis import JARVIS
+
+    jarvis_instance = JARVIS(
+        model_name=model,
+        user_id=user_id,
+        enable_memory=True,
+        enable_tools=True,
+        enable_rag=True,
+    )
+
+    stats_data = jarvis_instance.get_stats()
+
+    console.print("\n[bold]JARVIS Statistics[/bold]\n")
+
+    console.print(f"User: {stats_data['user_id']}")
+    console.print(f"Model: {stats_data['model']}")
+
+    console.print("\n[bold]Components:[/bold]")
+    for component, enabled in stats_data["components"].items():
+        status = "[green]✓[/green]" if enabled else "[red]✗[/red]"
+        console.print(f"  {status} {component}")
+
+    if "memory" in stats_data:
+        console.print("\n[bold]Memory:[/bold]")
+        for key, value in stats_data["memory"].items():
+            console.print(f"  {key}: {value}")
+
+    if "tools" in stats_data:
+        console.print("\n[bold]Tools:[/bold]")
+        console.print(f"  Count: {stats_data['tools']['count']}")
+        console.print(f"  Available: {', '.join(stats_data['tools']['available'])}")
+
+    if "rag" in stats_data:
+        console.print("\n[bold]RAG:[/bold]")
+        for key, value in stats_data["rag"].items():
+            console.print(f"  {key}: {value}")
+
+    console.print()
+
+
 @cli.command()
 def info():
     """Display system information"""

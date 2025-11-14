@@ -11,3 +11,12 @@ click>=8.1.0
 pyyaml>=6.0.0
 matplotlib>=3.8.0
 seaborn>=0.13.0
+
+# JARVIS dependencies
+sentence-transformers>=2.5.0
+openai-whisper>=20231117
+duckduckgo-search>=5.0.0
+SpeechRecognition>=3.10.0
+sounddevice>=0.4.6
+scipy>=1.12.0
+websockets>=12.0
