@@ -4,6 +4,112 @@
 
 Built with custom Triton kernels and PyTorch, delivering state-of-the-art inference performance for large language models.
 
+---
+
+## 🤖 JARVIS - Your Personal AI Assistant
+
+**Walk into any room and just say "Hi" - JARVIS is listening.**
+
+Experience the future of AI interaction with JARVIS (Just A Rather Very Intelligent System) - a complete, voice-activated AI assistant with memory, intelligence, and personality.
+
+### ✨ Real-Life AI Experience
+
+```bash
+# Beautiful one-command installer
+python install.py
+
+# Or start immediately
+ai-assistant-pro jarvis daemon
+```
+
+**Then just say:** *"Hi!"* 👋
+
+JARVIS will greet you based on time of day:
+- 🌅 **Morning**: "Good morning! How did you sleep?"
+- 🌞 **Afternoon**: "Good afternoon! How's your day going?"
+- 🌆 **Evening**: "Good evening! How was your day?"
+
+### 🎯 What Makes JARVIS Special
+
+- **🎤 Natural Voice Interaction**: Say "Hi", "Hello", or "Jarvis" to activate - just like talking to a friend
+- **🧠 Long-Term Memory**: Remembers all your conversations, preferences, and important moments
+- **💬 Proactive & Thoughtful**: Asks how you're doing, remembers what matters to you
+- **🛠️ Powerful Tools**: Web search, calculator, code execution, file operations
+- **📚 Knowledge Base**: Load your documents and JARVIS becomes your personal knowledge expert
+- **🌐 Beautiful Web Interface**: Chat through your browser with real-time WebSocket
+- **👥 Multi-User Support**: Each person gets their own memory and preferences
+
+### 🚀 Quick Start
+
+#### Option 1: Beautiful Installer (Recommended)
+```bash
+python install.py
+```
+
+The installer will:
+- ✨ Guide you through setup with a stunning interface
+- 🎤 Test your microphone
+- 👤 Set up your profile
+- ⚙️ Configure JARVIS to your preferences
+- 🚀 Optionally start JARVIS immediately
+
+#### Option 2: Direct Start
+```bash
+# Install
+pip install -e .
+
+# Start daemon (always-on listening)
+ai-assistant-pro jarvis daemon
+
+# Or interactive chat
+ai-assistant-pro jarvis chat
+
+# Or web interface
+ai-assistant-pro jarvis serve
+```
+
+### 💡 Usage Examples
+
+**Voice Daemon (Real-Life JARVIS)**
+```bash
+ai-assistant-pro jarvis daemon --user-id "your_name"
+```
+- Runs in background, always listening
+- Just say "Hi" to start a conversation
+- Greets you proactively when you enter
+- Remembers everything you talk about
+
+**Python API**
+```python
+from ai_assistant_pro.jarvis import JARVIS
+
+# Create your personal assistant
+jarvis = JARVIS(
+    user_id="your_name",
+    enable_voice=True,
+    enable_memory=True,
+    enable_tools=True,
+)
+
+# Have a conversation
+result = jarvis.chat("What's the weather like?")
+print(result["response"])
+
+# Load your knowledge
+jarvis.load_knowledge_base("./my_docs", pattern="*.md")
+
+# Start web interface
+jarvis.start_web_interface(port=8080)
+```
+
+### 📚 Full Documentation
+
+- **[JARVIS Complete Guide](docs/JARVIS_GUIDE.md)** - Everything about JARVIS
+- **[Examples](examples/jarvis_examples.py)** - 11 comprehensive examples
+- **[SRF Guide](docs/SRF_GUIDE.md)** - Technical details on the memory system
+
+---
+
 ## 🌟 Features
 
 ### 🧠 Stone Retrieval Function (SRF) - **PATENTED**

@@ -98,6 +98,124 @@ class VoiceInterface:
             logger.error(f"Failed to load TTS model: {e}")
             self.tts_model = None
 
+    def record_audio(
+        self,
+        duration: float = 5.0,
+        sample_rate: int = 16000,
+    ) -> Optional[np.ndarray]:
+        """
+        Record audio from microphone
+
+        Args:
+            duration: Recording duration in seconds
+            sample_rate: Sample rate in Hz
+
+        Returns:
+            Audio data as numpy array or None if failed
+        """
+        try:
+            import sounddevice as sd
+
+            # Record audio
+            audio = sd.rec(
+                int(duration * sample_rate),
+                samplerate=sample_rate,
+                channels=1,
+                dtype=np.float32,
+            )
+            sd.wait()
+
+            # Check if audio was captured
+            if np.abs(audio).max() < 0.001:  # Very quiet, likely no input
+                return None
+
+            return audio.flatten()
+
+        except Exception as e:
+            logger.error(f"Failed to record audio: {e}")
+            return None
+
+    def transcribe_audio(
+        self,
+        audio: np.ndarray,
+        sample_rate: int = 16000,
+    ) -> Optional[str]:
+        """
+        Transcribe audio to text
+
+        Args:
+            audio: Audio data as numpy array
+            sample_rate: Sample rate
+
+        Returns:
+            Transcribed text or None if failed
+        """
+        if self.stt_model is None:
+            logger.warning("STT model not available, using fallback")
+            return self._transcribe_fallback(audio, sample_rate)
+
+        try:
+            # Prepare audio for Whisper
+            inputs = self.stt_processor(
+                audio,
+                sampling_rate=sample_rate,
+                return_tensors="pt",
+            )
+
+            # Move to device
+            inputs = {k: v.to(self.device) for k, v in inputs.items()}
+
+            # Generate transcription
+            with torch.no_grad():
+                predicted_ids = self.stt_model.generate(**inputs)
+
+            # Decode
+            transcription = self.stt_processor.batch_decode(
+                predicted_ids,
+                skip_special_tokens=True,
+            )[0]
+
+            return transcription.strip()
+
+        except Exception as e:
+            logger.error(f"Failed to transcribe audio: {e}")
+            return None
+
+    def _transcribe_fallback(
+        self,
+        audio: np.ndarray,
+        sample_rate: int = 16000,
+    ) -> Optional[str]:
+        """Fallback transcription using SpeechRecognition"""
+        try:
+            import speech_recognition as sr
+            import tempfile
+            import scipy.io.wavfile as wavfile
+
+            # Save to temporary WAV file
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+                temp_path = f.name
+
+            # Convert to int16
+            audio_int16 = (audio * 32767).astype(np.int16)
+            wavfile.write(temp_path, sample_rate, audio_int16)
+
+            # Transcribe using Google Speech Recognition
+            recognizer = sr.Recognizer()
+
+            with sr.AudioFile(temp_path) as source:
+                audio_data = recognizer.record(source)
+                text = recognizer.recognize_google(audio_data)
+
+            # Clean up
+            Path(temp_path).unlink()
+
+            return text
+
+        except Exception as e:
+            logger.error(f"Fallback transcription failed: {e}")
+            return None
+
     def transcribe(
         self,
         audio_path: Optional[str] = None,

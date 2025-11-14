@@ -294,6 +294,40 @@ def voice(model, user_id):
 
 
 @jarvis.command()
+@click.option("--model", "-m", default="gpt2", help="Model name")
+@click.option("--user-id", "-u", default="default", help="User identifier")
+@click.option("--config", "-c", help="Config file path")
+@click.option(
+    "--wake-words",
+    "-w",
+    multiple=True,
+    default=["hi", "hello", "jarvis"],
+    help="Wake words for activation",
+)
+@click.option(
+    "--no-proactive",
+    is_flag=True,
+    help="Disable proactive greetings",
+)
+def daemon(model, user_id, config, wake_words, no_proactive):
+    """Start always-on JARVIS daemon (real-life JARVIS experience)"""
+    from ai_assistant_pro.jarvis.daemon import JARVISDaemon
+
+    console.print("[bold cyan]🚀 Starting JARVIS Daemon...[/bold cyan]\n")
+    console.print("[dim]Creating real-life AI assistant experience...[/dim]\n")
+
+    daemon_instance = JARVISDaemon(
+        user_id=user_id,
+        model_name=model,
+        wake_words=list(wake_words),
+        enable_proactive=not no_proactive,
+        config_path=config,
+    )
+
+    daemon_instance.run()
+
+
+@jarvis.command()
 @click.argument("directory", type=click.Path(exists=True))
 @click.option("--pattern", default="*.md", help="File pattern to load")
 @click.option("--model", "-m", default="gpt2", help="Model name")
