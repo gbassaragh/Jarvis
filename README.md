@@ -39,33 +39,59 @@ JARVIS will greet you based on time of day:
 - **🌐 Beautiful Web Interface**: Chat through your browser with real-time WebSocket
 - **👥 Multi-User Support**: Each person gets their own memory and preferences
 
-### 🚀 Quick Start
+### 🚀 Installation
 
-#### Option 1: Beautiful Installer (Recommended)
+#### 🎨 Professional GUI Installer (Recommended)
+
+**Adobe/Microsoft Flight Simulator style installer!**
+
+```bash
+python setup_jarvis.py
+```
+
+**Features:**
+- 🎨 **Beautiful Dark Theme GUI** - Professional Adobe-style interface
+- ✅ **Select AI Models** - Choose which models to download with checkboxes
+- 📊 **Real-Time Progress** - Track download progress for each model
+- 💾 **Smart Downloads** - Small 50MB package, downloads 500MB-8GB of models on demand
+- ⚙️ **Auto-Configuration** - Everything configured automatically
+- 🚀 **One-Click Launch** - Start JARVIS immediately after install
+
+**Choose Your Models:**
+- 🧠 **Language Models**: GPT-2 Small (500MB) / Medium (1.5GB) / Large (3GB)
+- 🎤 **Speech-to-Text**: Whisper Tiny (150MB) / Base (300MB) / Small (950MB)
+- 🔊 **Text-to-Speech**: Bark TTS (1.2GB)
+- 📊 **Embeddings**: MiniLM (80MB) / MPNet (420MB)
+
+**Installation Flow:**
+1. Welcome screen with JARVIS intro
+2. Model selection with descriptions and sizes
+3. Download progress with live updates
+4. Configuration and setup
+5. Launch option or finish
+
+---
+
+#### 💻 CLI Installer (Alternative)
 ```bash
 python install.py
 ```
 
-The installer will:
-- ✨ Guide you through setup with a stunning interface
-- 🎤 Test your microphone
-- 👤 Set up your profile
-- ⚙️ Configure JARVIS to your preferences
-- 🚀 Optionally start JARVIS immediately
+Interactive terminal installer with:
+- System requirements check
+- Microphone testing
+- Voice calibration wizard
+- User profile setup
 
-#### Option 2: Direct Start
+---
+
+#### ⚡ Quick Start (Manual)
 ```bash
-# Install
+# Install core
 pip install -e .
 
-# Start daemon (always-on listening)
+# Start JARVIS
 ai-assistant-pro jarvis daemon
-
-# Or interactive chat
-ai-assistant-pro jarvis chat
-
-# Or web interface
-ai-assistant-pro jarvis serve
 ```
 
 ### 💡 Usage Examples
