@@ -28,7 +28,7 @@ class SemanticSimilarity:
     Supports multiple similarity metrics.
     """
 
-    def __init__(self, model: str = "cosine", device: str = "cuda"):
+    def __init__(self, model: str = "cosine", device: str = "cuda") -> None:
         """
         Initialize semantic similarity module
 
@@ -99,7 +99,6 @@ class SemanticSimilarity:
         candidates = candidates.to(self.device)
 
         if self.model == "cosine":
-            # Batch cosine similarity
             similarity = F.cosine_similarity(
                 query.unsqueeze(0),
                 candidates,
@@ -125,11 +124,11 @@ class EmotionalWeighting:
     Higher scores indicate more emotionally significant memories.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize emotional weighting module"""
         pass
 
-    def compute(self, candidate) -> float:
+    def compute(self, candidate: "MemoryCandidate") -> float:
         """
         Compute emotional weight
 
@@ -205,7 +204,7 @@ class AssociativeStrength:
     Memories with more associations are considered more important.
     """
 
-    def __init__(self, association_boost: float = 0.1):
+    def __init__(self, association_boost: float = 0.1) -> None:
         """
         Initialize associative strength module
 
@@ -214,7 +213,7 @@ class AssociativeStrength:
         """
         self.association_boost = association_boost
 
-    def compute(self, candidate, all_candidates: Dict) -> float:
+    def compute(self, candidate: "MemoryCandidate", all_candidates: Dict[int, "MemoryCandidate"]) -> float:
         """
         Compute associative strength
 
@@ -258,7 +257,7 @@ class AssociativeStrength:
         scores = association_counts.float() * self.association_boost
         return torch.clamp(scores, 0.0, 1.0)
 
-    def add_association(self, candidate, target_id: int) -> None:
+    def add_association(self, candidate: "MemoryCandidate", target_id: int) -> None:
         """
         Add an association between candidates
 
@@ -278,7 +277,7 @@ class RecencyTracker:
     More recent memories receive higher scores.
     """
 
-    def __init__(self, time_scale: float = 3600.0):
+    def __init__(self, time_scale: float = 3600.0) -> None:
         """
         Initialize recency tracker
 
@@ -288,7 +287,7 @@ class RecencyTracker:
         """
         self.time_scale = time_scale
 
-    def compute(self, candidate, current_time: float) -> float:
+    def compute(self, candidate: "MemoryCandidate", current_time: float) -> float:
         """
         Compute recency score
 
@@ -355,7 +354,7 @@ class DecayModel:
     Older memories decay more, reducing their retrieval probability.
     """
 
-    def __init__(self, half_life: float = 3600.0, curve: str = "exponential"):
+    def __init__(self, half_life: float = 3600.0, curve: str = "exponential") -> None:
         """
         Initialize decay model
 
@@ -369,7 +368,7 @@ class DecayModel:
         assert curve in ["exponential", "power", "logarithmic"], \
             f"Unknown curve: {curve}"
 
-    def compute(self, candidate, current_time: float) -> float:
+    def compute(self, candidate: "MemoryCandidate", current_time: float) -> float:
         """
         Compute decay score
 
