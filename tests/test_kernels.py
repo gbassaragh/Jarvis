@@ -2,6 +2,8 @@
 Unit tests for custom Triton kernels
 """
 
+import os
+
 import pytest
 import torch
 import torch.nn.functional as F
@@ -11,7 +13,12 @@ from ai_assistant_pro.kernels.fused_ops import fused_layernorm, fused_gelu
 from ai_assistant_pro.kernels.quantization import quantize_fp8, dequantize_fp8
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+pytestmark = pytest.mark.skipif(
+    not torch.cuda.is_available() or os.getenv("RUN_CUDA_TESTS") != "1",
+    reason="Requires CUDA and RUN_CUDA_TESTS=1",
+)
+
+
 class TestFlashAttention:
     """Test FlashAttention-3 kernel"""
 

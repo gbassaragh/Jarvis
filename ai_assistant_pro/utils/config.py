@@ -36,12 +36,17 @@ def load_config(config_path: Union[str, Path]) -> Dict[str, Any]:
 
     if suffix in [".yaml", ".yml"]:
         with open(config_path) as f:
-            return yaml.safe_load(f)
+            data = yaml.safe_load(f)
     elif suffix == ".json":
         with open(config_path) as f:
-            return json.load(f)
+            data = json.load(f)
     else:
         raise ValueError(f"Unsupported configuration format: {suffix}")
+
+    if not isinstance(data, dict):
+        raise ValueError(f"Configuration file must contain a mapping, got {type(data).__name__}")
+
+    return data
 
 
 def save_config(config: Dict[str, Any], config_path: Union[str, Path]) -> None:

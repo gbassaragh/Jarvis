@@ -67,7 +67,8 @@ class SRFBenchmark:
         # Benchmark
         times = []
         for _ in track(range(num_runs), description="Running baseline"):
-            torch.cuda.synchronize()
+            if self.device.startswith("cuda") and torch.cuda.is_available():
+                torch.cuda.synchronize()
             start = time.time()
 
             scores = torch.nn.functional.cosine_similarity(
@@ -77,7 +78,8 @@ class SRFBenchmark:
             )
             top_scores, top_indices = torch.topk(scores, k=10)
 
-            torch.cuda.synchronize()
+            if self.device.startswith("cuda") and torch.cuda.is_available():
+                torch.cuda.synchronize()
             times.append(time.time() - start)
 
         return {
@@ -195,7 +197,7 @@ class SRFBenchmark:
             results.append(cpu_result)
 
         # SRF GPU
-        if torch.cuda.is_available():
+        if self.device.startswith("cuda") and torch.cuda.is_available():
             gpu_result = self.benchmark_srf_gpu_triton()
             results.append(gpu_result)
 

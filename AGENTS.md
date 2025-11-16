@@ -10,9 +10,10 @@
 - Install dev deps: `pip install -e ".[dev]"`.
 - Run locally (voice daemon): `ai-assistant-pro jarvis daemon --user-id "you"`.
 - GUI installer: `python setup_jarvis.py`; CLI installer: `python install.py`.
-- Lint/format: `black ai_assistant_pro/ examples/ benchmarks/`; `ruff check ai_assistant_pro/ examples/ benchmarks/`; `isort ai_assistant_pro/ tests/`; `flake8 ai_assistant_pro/ tests/`.
+- Lint/format: `black ai_assistant_pro/ examples/ benchmarks/`; `ruff check ai_assistant_pro/ examples/ benchmarks/`; `isort ai_assistant_pro/ tests/`; `flake8 ai_assistant_pro/ tests/`; optional `pre-commit run --all-files`.
 - Type check: `mypy ai_assistant_pro/`.
 - Tests: `pytest tests/`; add `-k <name>` to target a subset.
+- CUDA-only tests require GPU and `RUN_CUDA_TESTS=1`.
 
 ## Coding Style & Naming
 - Python 3.10+; Black + Ruff enforce style (100-char lines). Keep imports sorted with `isort` (black profile).

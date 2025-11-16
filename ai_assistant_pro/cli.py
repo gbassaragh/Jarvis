@@ -4,11 +4,13 @@ Command-line interface for AI Assistant Pro
 Provides easy access to all framework features via CLI.
 """
 
-import click
-import torch
 from pathlib import Path
 from rich.console import Console
 from rich.table import Table
+import time
+
+import click
+import torch
 
 console = Console()
 
@@ -58,7 +60,8 @@ def generate(model, prompt, max_tokens, temperature, use_triton, use_fp8):
 @click.option("--model", "-m", default="gpt2", help="Model to serve")
 @click.option("--use-triton/--no-triton", default=True, help="Use Triton kernels")
 @click.option("--use-fp8/--no-fp8", default=False, help="Use FP8 quantization")
-def serve(host, port, model, use_triton, use_fp8):
+@click.option("--dry-run", is_flag=True, help="Validate config and exit without starting server")
+def serve(host, port, model, use_triton, use_fp8, dry_run):
     """Start API server"""
     from ai_assistant_pro.serving import serve as start_server
 
@@ -68,6 +71,10 @@ def serve(host, port, model, use_triton, use_fp8):
     console.print(f"  Port: {port}")
     console.print(f"  Triton: {use_triton}")
     console.print(f"  FP8: {use_fp8}")
+
+    if dry_run:
+        console.print("[dim]Dry run only; server not started.[/dim]")
+        return
 
     start_server(
         host=host,
@@ -117,16 +124,26 @@ def benchmark(seq_lengths, model):
 @cli.command()
 @click.option("--n-candidates", default=1000, help="Number of candidates")
 @click.option("--embedding-dim", default=768, help="Embedding dimension")
-def srf_benchmark(n_candidates, embedding_dim):
+@click.option(
+    "--device",
+    default="cuda",
+    help="Device to run benchmarks on (cuda or cpu). Defaults to cuda if available.",
+)
+def srf_benchmark(n_candidates, embedding_dim, device):
     """Run SRF benchmarks"""
     from benchmarks.srf_benchmark import SRFBenchmark, SRFQualityBenchmark
 
     console.print("[bold]Running SRF benchmarks...[/bold]")
 
+    if device == "cuda" and not torch.cuda.is_available():
+        console.print("[yellow]CUDA not available; falling back to CPU.[/yellow]")
+        device = "cpu"
+
     # Performance benchmark
     perf_bench = SRFBenchmark(
         n_candidates=n_candidates,
         embedding_dim=embedding_dim,
+        device=device,
     )
     perf_bench.run_all_benchmarks()
 
@@ -180,7 +197,28 @@ def jarvis():
 @click.option("--enable-rag/--no-rag", default=False, help="Enable RAG knowledge base")
 @click.option("--use-triton/--no-triton", default=True, help="Use Triton kernels")
 @click.option("--use-fp8/--no-fp8", default=False, help="Use FP8 quantization")
-def chat(model, user_id, enable_memory, enable_tools, enable_rag, use_triton, use_fp8):
+@click.option("--max-turns", type=int, default=None, help="Auto-exit after N turns (CI-safe).")
+@click.option(
+    "--exit-after-seconds",
+    type=float,
+    default=None,
+    help="Auto-exit after N seconds without waiting for input (CI-safe).",
+)
+@click.option("--dry-run", is_flag=True, help="Initialize and exit without starting chat loop.")
+@click.option("--exit-phrase", default="quit", show_default=True, help="Phrase to exit the loop.")
+def chat(
+    model,
+    user_id,
+    enable_memory,
+    enable_tools,
+    enable_rag,
+    use_triton,
+    use_fp8,
+    max_turns,
+    exit_after_seconds,
+    dry_run,
+    exit_phrase,
+):
     """Start interactive JARVIS chat"""
     from ai_assistant_pro.jarvis import JARVIS
 
@@ -198,13 +236,28 @@ def chat(model, user_id, enable_memory, enable_tools, enable_rag, use_triton, us
     )
 
     console.print("[green]✓[/green] JARVIS ready!\n")
-    console.print("Type 'quit' to exit, 'stats' for statistics\n")
+    console.print(f"Type '{exit_phrase}' to exit, 'stats' for statistics\n")
+
+    if dry_run:
+        console.print("[dim]Dry run only; chat loop not started.[/dim]")
+        return
+
+    start_time = time.perf_counter()
+    turns = 0
 
     while True:
         try:
+            if exit_after_seconds is not None and (time.perf_counter() - start_time) >= exit_after_seconds:
+                console.print("\n[dim]Auto-exit after timeout.[/dim]")
+                break
+
+            if max_turns is not None and turns >= max_turns:
+                console.print("\n[dim]Auto-exit after max turns.[/dim]")
+                break
+
             message = input("You: ")
 
-            if message.lower() == "quit":
+            if message.lower() == exit_phrase.lower():
                 break
 
             if message.lower() == "stats":
@@ -234,6 +287,8 @@ def chat(model, user_id, enable_memory, enable_tools, enable_rag, use_triton, us
 
             console.print()
 
+            turns += 1
+
         except KeyboardInterrupt:
             break
 
@@ -246,7 +301,8 @@ def chat(model, user_id, enable_memory, enable_tools, enable_rag, use_triton, us
 @click.option("--model", "-m", default="gpt2", help="Model name")
 @click.option("--use-triton/--no-triton", default=True, help="Use Triton kernels")
 @click.option("--use-fp8/--no-fp8", default=False, help="Use FP8 quantization")
-def serve(host, port, model, use_triton, use_fp8):
+@click.option("--dry-run", is_flag=True, help="Validate and exit without starting web server")
+def serve(host, port, model, use_triton, use_fp8, dry_run):
     """Start JARVIS web interface"""
     from ai_assistant_pro.jarvis import JARVIS
 
@@ -266,13 +322,18 @@ def serve(host, port, model, use_triton, use_fp8):
     console.print(f"[bold]Web interface:[/bold] http://{host}:{port}")
     console.print("\nPress Ctrl+C to stop\n")
 
+    if dry_run:
+        console.print("[dim]Dry run only; web interface not started.[/dim]")
+        return
+
     jarvis_instance.start_web_interface(host=host, port=port)
 
 
 @jarvis.command()
 @click.option("--model", "-m", default="gpt2", help="Model name")
 @click.option("--user-id", "-u", default="default", help="User identifier")
-def voice(model, user_id):
+@click.option("--dry-run", is_flag=True, help="Initialize and exit without starting mic loop")
+def voice(model, user_id, dry_run):
     """Start JARVIS voice assistant (requires microphone)"""
     from ai_assistant_pro.jarvis import JARVIS
 
@@ -289,6 +350,10 @@ def voice(model, user_id):
     console.print("\n[green]✓[/green] JARVIS ready!")
     console.print("[bold]Say 'Jarvis' followed by your command[/bold]")
     console.print("Press Ctrl+C to stop\n")
+
+    if dry_run:
+        console.print("[dim]Dry run only; voice assistant not started.[/dim]")
+        return
 
     jarvis_instance.start_voice_assistant()
 

@@ -30,6 +30,7 @@ def setup_logging(
     # Create logger
     logger = logging.getLogger("ai_assistant_pro")
     logger.setLevel(getattr(logging, level.upper()))
+    logger.propagate = False
 
     # Remove existing handlers
     logger.handlers = []

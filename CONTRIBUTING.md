@@ -34,6 +34,7 @@ ruff check ai_assistant_pro/ examples/ benchmarks/
 mypy ai_assistant_pro/
 isort ai_assistant_pro/ tests/
 flake8 ai_assistant_pro/ tests/
+pre-commit run --all-files
 ```
 
 ### Testing
@@ -44,6 +45,8 @@ pytest tests/
 ```
 
 Add tests for new features in `tests/`.
+
+CUDA-only kernel tests are gated; set `RUN_CUDA_TESTS=1` and ensure a GPU is available to run them.
 
 ### Custom Kernels
 
