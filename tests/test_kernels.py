@@ -47,7 +47,7 @@ class TestFlashAttention:
         v = torch.randn(batch, heads, seq_len, head_dim, device="cuda", dtype=torch.float16)
 
         # FlashAttention
-        out_flash = flashattention_v3(q, k, v, use_fp8=False)
+        out_flash = flashattention_v3(q, k, v, use_fp8=False, backend="triton")
 
         # PyTorch reference
         scale = 1.0 / (head_dim ** 0.5)
