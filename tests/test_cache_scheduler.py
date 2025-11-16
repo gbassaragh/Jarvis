@@ -1,3 +1,4 @@
+import pytest
 import torch
 
 from ai_assistant_pro.engine.cache import CacheManager, PagedKVCache
@@ -87,3 +88,35 @@ def test_scheduler_schedule_and_finish():
     batch2 = scheduler.schedule(num_free_blocks=10)
     scheduled_ids = {r.request_id for r in batch2}
     assert id3 in scheduled_ids
+
+
+def test_cache_manager_insufficient_blocks_error():
+    manager = CacheManager(
+        max_num_blocks=1,
+        block_size=2,
+        num_heads=1,
+        head_dim=1,
+        num_layers=1,
+        dtype=torch.float16,
+        device="cpu",
+    )
+    # prompt_len=3 needs 2 blocks, should be rejected by can_allocate
+    assert manager.can_allocate(prompt_len=3) is False
+    with pytest.raises(RuntimeError):
+        manager.cache.allocate_blocks(seq_id=0, num_blocks=2)
+
+
+def test_scheduler_cancel_and_stats():
+    scheduler = ContinuousBatchScheduler(max_batch_size=1, max_num_sequences=2, block_size=2)
+    req_id = scheduler.add_request([1, 2], max_tokens=1)
+    assert scheduler.cancel_request(req_id) is True
+    stats = scheduler.get_statistics()
+    assert stats["waiting"] == 0
+    assert stats["total_requests"] == 1
+
+    # finished requests get counted in stats
+    req2 = scheduler.add_request([1], max_tokens=1)
+    scheduler.schedule(num_free_blocks=10)
+    scheduler.update_finished(req2, new_token=3, is_eos=True)
+    stats = scheduler.get_statistics()
+    assert stats["finished"] == 1
