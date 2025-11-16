@@ -9,11 +9,15 @@ Each component implements one part of the R_bio equation:
 - D(c): Decay Model
 """
 
-import torch
-import torch.nn.functional as F
-from typing import Dict, Optional
 import math
 import time
+from typing import Dict, Optional, TYPE_CHECKING
+
+import torch
+import torch.nn.functional as F
+
+if TYPE_CHECKING:
+    from ai_assistant_pro.srf.core import MemoryCandidate  # pragma: no cover
 
 
 class SemanticSimilarity:
@@ -64,15 +68,17 @@ class SemanticSimilarity:
             # Normalize to [0, 1]
             return (similarity + 1.0) / 2.0
 
-        elif self.model == "dot":
+        if self.model == "dot":
             # Dot product similarity: q · c
             return torch.dot(query, candidate)
 
-        elif self.model == "euclidean":
+        if self.model == "euclidean":
             # Euclidean distance, converted to similarity
             # similarity = 1 / (1 + distance)
             distance = torch.norm(query - candidate)
             return 1.0 / (1.0 + distance)
+
+        raise ValueError(f"Unsupported model: {self.model}")
 
     def batch_compute(
         self,
@@ -101,14 +107,14 @@ class SemanticSimilarity:
             )
             return (similarity + 1.0) / 2.0
 
-        elif self.model == "dot":
-            # Batch dot product
+        if self.model == "dot":
             return torch.matmul(candidates, query)
 
-        elif self.model == "euclidean":
-            # Batch euclidean distance
+        if self.model == "euclidean":
             distances = torch.norm(candidates - query.unsqueeze(0), dim=1)
             return 1.0 / (1.0 + distances)
+
+        raise ValueError(f"Unsupported model: {self.model}")
 
 
 class EmotionalWeighting:
