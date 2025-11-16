@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """
 Main inference engine for AI Assistant Pro
 

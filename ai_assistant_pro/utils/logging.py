@@ -36,6 +36,7 @@ def setup_logging(
     logger.handlers = []
 
     # Console handler
+    console_handler: logging.Handler
     if use_rich:
         console_handler = RichHandler(
             rich_tracebacks=True,

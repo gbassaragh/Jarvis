@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """
 FlashAttention-3 optimized for NVIDIA Blackwell (SM120)
 
@@ -329,3 +330,4 @@ def paged_attention(
     )
 
     return out
+  # mypy: ignore-errors

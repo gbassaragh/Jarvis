@@ -11,7 +11,10 @@ __version__ = "0.1.0"
 __all__ = ["AssistantEngine", "flashattention_v3", "PagedKVCache"]
 
 
-def __getattr__(name):
+from typing import Any
+
+
+def __getattr__(name: str) -> Any:
     if name == "AssistantEngine":
         from ai_assistant_pro.engine.model import AssistantEngine as _AssistantEngine
 

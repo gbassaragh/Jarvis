@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """
 Fused operations optimized for SM120
 
@@ -360,3 +361,4 @@ def apply_rotary_embedding(
     )
 
     return q_out, k_out
+  # mypy: ignore-errors

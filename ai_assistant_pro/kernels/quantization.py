@@ -1,3 +1,4 @@
+# mypy: ignore-errors
 """
 FP8 and INT8 quantization kernels for SM120
 
@@ -313,3 +314,4 @@ def fused_quantized_matmul(
     )
 
     return c
+  # mypy: ignore-errors

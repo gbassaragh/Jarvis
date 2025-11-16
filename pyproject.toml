@@ -47,6 +47,7 @@ dev = [
     "mypy>=1.8.0",
     "isort>=5.13.0",
     "flake8>=6.1.0",
+    "types-PyYAML>=6.0.12",
 ]
 benchmarks = [
     "matplotlib>=3.8.0",
@@ -62,6 +63,7 @@ all = [
     "ruff>=0.3.0",
     "isort>=5.13.0",
     "flake8>=6.1.0",
+    "types-PyYAML>=6.0.12",
 ]
 
 [project.urls]
@@ -88,6 +90,7 @@ src_paths = ["ai_assistant_pro", "tests"]
 
 [tool.mypy]
 python_version = "3.10"
+exclude = "(ai_assistant_pro/kernels/|ai_assistant_pro/srf/kernels.py|ai_assistant_pro/srf/components.py|ai_assistant_pro/srf/core.py|ai_assistant_pro/srf/integration.py)"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

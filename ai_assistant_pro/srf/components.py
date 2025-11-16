@@ -77,7 +77,7 @@ class SemanticSimilarity:
     def batch_compute(
         self,
         query: torch.Tensor,
-        candidates: torch.Tensor
+        candidates: torch.Tensor,
     ) -> torch.Tensor:
         """
         Compute similarity for multiple candidates

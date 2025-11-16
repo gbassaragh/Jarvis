@@ -3,10 +3,12 @@
 Heavy modules are imported lazily to avoid pulling GPU deps on lightweight imports.
 """
 
+from typing import Any
+
 __all__ = ["AssistantEngine", "PagedKVCache", "ContinuousBatchScheduler"]
 
 
-def __getattr__(name):
+def __getattr__(name: str) -> Any:
     if name == "AssistantEngine":
         from ai_assistant_pro.engine.model import AssistantEngine as _AssistantEngine
 
