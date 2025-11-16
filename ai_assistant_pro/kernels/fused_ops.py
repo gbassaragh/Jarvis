@@ -171,6 +171,12 @@ def fused_gelu(x: torch.Tensor) -> torch.Tensor:
         - 3x faster than PyTorch GELU on SM120
         - Memory-bound operation optimized for Blackwell
     """
+    # Fallback to torch GELU if Triton lacks tanh or on CPU
+    if (not hasattr(tl, "tanh")) or (not x.is_cuda):
+        import torch.nn.functional as F  # local import to avoid overhead
+
+        return F.gelu(x)
+
     y = torch.empty_like(x)
     N = x.numel()
 

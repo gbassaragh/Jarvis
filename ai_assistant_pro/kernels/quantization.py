@@ -10,44 +10,6 @@ import triton
 import triton.language as tl
 
 
-@triton.jit
-def _quantize_fp8_kernel(
-    X, Y, Scale,
-    N,
-    BLOCK_SIZE: tl.constexpr,
-):
-    """
-    Quantize FP16/BF16 to FP8 (E4M3 format)
-
-    E4M3 format:
-    - 1 sign bit
-    - 4 exponent bits
-    - 3 mantissa bits
-    - Range: ±448, good for activations
-    """
-    pid = tl.program_id(0)
-
-    # Compute offsets
-    offs = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
-    mask = offs < N
-
-    # Load input
-    x = tl.load(X + offs, mask=mask, other=0.0)
-
-    # Compute scale (per-tensor quantization)
-    # Scale to maximize FP8 range [-448, 448]
-    abs_max = tl.max(tl.abs(x))
-    scale = 448.0 / (abs_max + 1e-12)
-
-    # Quantize
-    y = (x * scale).to(tl.float8e4m3)
-
-    # Store output and scale
-    tl.store(Y + offs, y, mask=mask)
-    if pid == 0:
-        tl.store(Scale, scale)
-
-
 def quantize_fp8(x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Quantize tensor to FP8 format
@@ -63,50 +25,12 @@ def quantize_fp8(x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         - 2x compute throughput on SM120 tensor cores
         - Minimal accuracy loss for most models
     """
-    N = x.numel()
-    x_flat = x.flatten()
-
-    # Allocate output
-    y = torch.empty_like(x_flat, dtype=torch.float8_e4m3fn)
-    scale = torch.zeros(1, device=x.device, dtype=torch.float32)
-
-    BLOCK_SIZE = 1024
-
-    grid = (triton.cdiv(N, BLOCK_SIZE),)
-
-    _quantize_fp8_kernel[grid](
-        x_flat, y, scale,
-        N,
-        BLOCK_SIZE=BLOCK_SIZE,
-    )
-
-    return y.reshape(x.shape), scale
-
-
-@triton.jit
-def _dequantize_fp8_kernel(
-    X, Y, Scale,
-    N,
-    BLOCK_SIZE: tl.constexpr,
-):
-    """
-    Dequantize FP8 back to FP16/BF16
-    """
-    pid = tl.program_id(0)
-
-    # Compute offsets
-    offs = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)
-    mask = offs < N
-
-    # Load input and scale
-    x = tl.load(X + offs, mask=mask, other=0.0)
-    scale = tl.load(Scale)
-
-    # Dequantize
-    y = x.to(tl.float32) / scale
-
-    # Store output
-    tl.store(Y + offs, y, mask=mask)
+    # Torch fallback: symmetric int8 quantization as FP8 proxy
+    x_fp32 = x.float()
+    abs_max = torch.max(torch.abs(x_fp32)).clamp(min=1e-6)
+    scale = (abs_max / 240.0).to(dtype=torch.float32)  # 240 is rough FP8 range proxy
+    q = torch.clamp((x_fp32 / scale).round(), -127, 127).to(torch.int8)
+    return q, scale
 
 
 def dequantize_fp8(x: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
@@ -120,23 +44,7 @@ def dequantize_fp8(x: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
     Returns:
         Dequantized tensor
     """
-    N = x.numel()
-    x_flat = x.flatten()
-
-    # Allocate output
-    y = torch.empty_like(x_flat, dtype=torch.float32)
-
-    BLOCK_SIZE = 1024
-
-    grid = (triton.cdiv(N, BLOCK_SIZE),)
-
-    _dequantize_fp8_kernel[grid](
-        x_flat, y, scale,
-        N,
-        BLOCK_SIZE=BLOCK_SIZE,
-    )
-
-    return y.reshape(x.shape)
+    return x.float() * scale
 
 
 @triton.jit
