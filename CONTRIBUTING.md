@@ -24,12 +24,16 @@ We use:
 - **Black** for code formatting (line length: 100)
 - **Ruff** for linting
 - **MyPy** for type checking
+- **isort** for import ordering (black profile)
+- **Flake8** for additional linting
 
 Run formatters:
 ```bash
 black ai_assistant_pro/ examples/ benchmarks/
 ruff check ai_assistant_pro/ examples/ benchmarks/
 mypy ai_assistant_pro/
+isort ai_assistant_pro/ tests/
+flake8 ai_assistant_pro/ tests/
 ```
 
 ### Testing

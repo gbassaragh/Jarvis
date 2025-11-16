@@ -22,7 +22,7 @@ def _fwd_kernel_flashattention_v3(
     stride_kz, stride_kh, stride_kn, stride_kk,
     stride_vz, stride_vh, stride_vn, stride_vk,
     stride_oz, stride_oh, stride_om, stride_ok,
-    Z, H, M, N, K,
+    Z, H, M, N, D,
     scale,
     BLOCK_M: tl.constexpr,
     BLOCK_N: tl.constexpr,
