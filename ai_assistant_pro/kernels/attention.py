@@ -79,7 +79,7 @@ def _fwd_kernel_flashattention_v3(
         # Causal mask (optional - can be controlled via flag)
         offs_m_curr = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
         causal_mask = offs_m_curr[:, None] >= offs_n[None, :]
-        qk = tl.where(causal_mask, qk, float("-inf"))
+        qk = tl.where(causal_mask, qk, -1e4)
 
         # Online softmax with numerical stability
         m_ij = tl.max(qk, axis=1)
@@ -154,13 +154,21 @@ def flashattention_v3(
         attn = torch.matmul(q, k.transpose(-2, -1)) * scale
         attn = torch.softmax(attn, dim=-1)
         return torch.matmul(attn, v)
+    # Guard against non-finite inputs to avoid NaNs in Triton path
+    if not torch.isfinite(q).all() or not torch.isfinite(k).all() or not torch.isfinite(v).all():
+        scale = 1.0 / math.sqrt(q.shape[-1])
+        attn = torch.matmul(q, k.transpose(-2, -1)) * scale
+        attn = torch.softmax(attn, dim=-1)
+        return torch.matmul(attn, v)
 
     batch, heads, seq_len, head_dim = q.shape
 
-    # Ensure contiguous
+    # Ensure contiguous and upcast to float32 for numerical stability during QK/softmax
     q = q.contiguous()
     k = k.contiguous()
     v = v.contiguous()
+    q_f32 = q.float()
+    k_f32 = k.float()
 
     # Allocate output
     out = torch.empty_like(q)
@@ -181,10 +189,10 @@ def flashattention_v3(
     grid = (batch, heads, triton.cdiv(seq_len, BLOCK_M))
 
     _fwd_kernel_flashattention_v3[grid](
-        q, k, v, out,
+        q_f32, k_f32, v, out,
         L,
-        q.stride(0), q.stride(1), q.stride(2), q.stride(3),
-        k.stride(0), k.stride(1), k.stride(2), k.stride(3),
+        q_f32.stride(0), q_f32.stride(1), q_f32.stride(2), q_f32.stride(3),
+        k_f32.stride(0), k_f32.stride(1), k_f32.stride(2), k_f32.stride(3),
         v.stride(0), v.stride(1), v.stride(2), v.stride(3),
         out.stride(0), out.stride(1), out.stride(2), out.stride(3),
         batch, heads, seq_len, seq_len, head_dim,
