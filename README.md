@@ -105,6 +105,14 @@ ai-assistant-pro jarvis daemon --user-id "your_name"
 - Greets you proactively when you enter
 - Remembers everything you talk about
 
+**GPU testing in WSL:** CUDA is supported with the provided CUDA 12.1 runtime in WSL. For GPU pytest runs, set:
+```
+C_INCLUDE_PATH=/usr/local/cuda/include \
+LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/lib/wsl/lib \
+NV_CUDA_VERBOSE=1 RUN_CUDA_TESTS=1 .venv/bin/pytest tests/test_kernels.py
+```
+FlashAttention Triton kernel may be numerically unstable on some WSL setups; the shape test remains expected-xfail. The PyTorch backend comparison is used for correctness.
+
 **Python API**
 ```python
 from ai_assistant_pro.jarvis import JARVIS
